@@ -78,6 +78,16 @@ Open http://localhost:5173 — the Vite dev server proxies `/api` requests to th
 
 If Jira env vars are left blank, the app works normally — the Jira checkbox and auto-create are simply disabled.
 
+## Deploying to Cloudways Velocity
+
+Cloudways Velocity runs a single Node.js process per app, so the whole project (root `package.json`) is set up to build the React client into static files and have the Express server serve them alongside the API:
+
+1. Connect this repo's `main` branch to your Cloudways Velocity app.
+2. Set **Build Command** to `npm run build` (installs both `server/` and `client/` deps and builds the client into `client/dist`).
+3. Set **Start Command** to `npm start` (runs `node server/server.js`, which serves the API under `/api/*` and the built React app for everything else).
+4. Add environment variables under **Deployment Management → Settings → Environment Variables**: either `DATABASE_URL` (+ `PGSSL=true`), or `PGHOST`/`PGUSER`/`PGPASSWORD`/`PGDATABASE`/`PGPORT`, plus any `JIRA_*` vars you want. Do **not** set `PORT` — Cloudways assigns that automatically and the server already reads `process.env.PORT`.
+5. Redeploy. If the page was blank before, it was almost certainly because there was no root `package.json` for Cloudways to detect a build/start command from, and/or the client was never built into static files for the server to serve — both are fixed now.
+
 ## API overview
 
 | Method | Path | Purpose |
