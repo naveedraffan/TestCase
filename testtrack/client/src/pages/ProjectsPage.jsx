@@ -7,8 +7,20 @@ export default function ProjectsPage() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
 
-  const load = () => api.get('/projects').then((r) => setProjects(r.data)).finally(() => setLoading(false));
+  const load = () =>
+    api
+      .get('/projects')
+      .then((r) => {
+        setProjects(Array.isArray(r.data) ? r.data : []);
+        setLoadError(Array.isArray(r.data) ? null : 'Unexpected response from server.');
+      })
+      .catch((err) => {
+        setProjects([]);
+        setLoadError(err.response?.data?.error || err.message || 'Failed to load projects.');
+      })
+      .finally(() => setLoading(false));
 
   useEffect(() => { load(); }, []);
 
@@ -35,6 +47,8 @@ export default function ProjectsPage() {
         <input placeholder="Description (optional)" value={description} onChange={(e) => setDescription(e.target.value)} />
         <button type="submit">Create project</button>
       </form>
+
+      {loadError && <p className="notice">Couldn't load projects: {loadError}</p>}
 
       {loading ? (
         <p>Loading…</p>

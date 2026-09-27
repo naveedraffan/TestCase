@@ -53,14 +53,20 @@ export default function RunDetailPage() {
   const [jiraStatus, setJiraStatus] = useState({ configured: false });
   const [history, setHistory] = useState({}); // run_case_id -> results[]
   const [expanded, setExpanded] = useState(null);
+  const [loadError, setLoadError] = useState(null);
 
   const load = useCallback(async () => {
-    const [runRes, jiraRes] = await Promise.all([
-      api.get(`/runs/${runId}`),
-      api.get('/jira/status'),
-    ]);
-    setRun(runRes.data);
-    setJiraStatus(jiraRes.data);
+    try {
+      const [runRes, jiraRes] = await Promise.all([
+        api.get(`/runs/${runId}`),
+        api.get('/jira/status'),
+      ]);
+      setRun({ ...runRes.data, cases: Array.isArray(runRes.data?.cases) ? runRes.data.cases : [] });
+      setJiraStatus(jiraRes.data || { configured: false });
+      setLoadError(null);
+    } catch (err) {
+      setLoadError(err.response?.data?.error || err.message || 'Failed to load run.');
+    }
   }, [runId]);
 
   useEffect(() => { load(); }, [load]);
@@ -76,6 +82,7 @@ export default function RunDetailPage() {
     load();
   };
 
+  if (loadError) return <p className="notice">Couldn't load this run: {loadError}</p>;
   if (!run) return <p>Loading…</p>;
 
   const summary = STATUS_OPTIONS.reduce((acc, s) => {

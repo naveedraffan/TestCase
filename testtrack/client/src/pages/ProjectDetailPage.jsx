@@ -15,21 +15,30 @@ export default function ProjectDetailPage() {
 
   const [runName, setRunName] = useState('');
   const [selectedCaseIds, setSelectedCaseIds] = useState([]);
+  const [loadError, setLoadError] = useState(null);
 
   const loadAll = useCallback(async () => {
-    const [projRes, suitesRes, runsRes] = await Promise.all([
-      api.get(`/projects/${projectId}`),
-      api.get('/suites', { params: { project_id: projectId } }),
-      api.get('/runs', { params: { project_id: projectId } }),
-    ]);
-    setProject(projRes.data);
-    setSuites(suitesRes.data);
-    setRuns(runsRes.data);
+    try {
+      const [projRes, suitesRes, runsRes] = await Promise.all([
+        api.get(`/projects/${projectId}`),
+        api.get('/suites', { params: { project_id: projectId } }),
+        api.get('/runs', { params: { project_id: projectId } }),
+      ]);
+      const suiteList = Array.isArray(suitesRes.data) ? suitesRes.data : [];
+      setProject(projRes.data);
+      setSuites(suiteList);
+      setRuns(Array.isArray(runsRes.data) ? runsRes.data : []);
 
-    const caseEntries = await Promise.all(
-      suitesRes.data.map((s) => api.get('/cases', { params: { suite_id: s.id } }).then((r) => [s.id, r.data]))
-    );
-    setCases(Object.fromEntries(caseEntries));
+      const caseEntries = await Promise.all(
+        suiteList.map((s) =>
+          api.get('/cases', { params: { suite_id: s.id } }).then((r) => [s.id, Array.isArray(r.data) ? r.data : []])
+        )
+      );
+      setCases(Object.fromEntries(caseEntries));
+      setLoadError(null);
+    } catch (err) {
+      setLoadError(err.response?.data?.error || err.message || 'Failed to load project.');
+    }
   }, [projectId]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
@@ -65,6 +74,7 @@ export default function ProjectDetailPage() {
     window.location.href = `/runs/${res.data.id}`;
   };
 
+  if (loadError) return <p className="notice">Couldn't load this project: {loadError}</p>;
   if (!project) return <p>Loading…</p>;
 
   const allCases = Object.values(cases).flat();
