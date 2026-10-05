@@ -1,9 +1,0 @@
-node_modules
-dist
-.output
-.nitro
-.vinxi
-.turbo
-*.local
-.env
-.DS_Store
